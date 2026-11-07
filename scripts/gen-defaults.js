@@ -48,4 +48,4 @@ const avgChars = toolNames.length > 0 ? Math.round(totalChars / toolNames.length
 lines.push(`// Tool count: ${toolNames.length} | Total chars: ${totalChars} | Avg chars: ${avgChars}`)
 
 writeFileSync(path.join(ROOT, "src", "defaults.js"), lines.join("\n"))
-console.log(`Wrote ${toolNames.length} tools, ${totalChars} chars total, ${avgChars} avg to src/defaults.ts`)
+console.log(`Wrote ${toolNames.length} tools, ${totalChars} chars total, ${avgChars} avg to src/defaults.js`)

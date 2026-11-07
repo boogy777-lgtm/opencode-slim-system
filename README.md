@@ -1,154 +1,173 @@
-# opencode-slim-system
+# opencode-slim-system — OpenCode V2 port
 
-Replaces OpenCode's bundled system prompt and built-in tool descriptions with compact versions to reduce per-request token overhead.
+Compact tool descriptions for **OpenCode 2.2.5**, with optional, fail-closed replacement of verified stock system prompts.
 
-Saves roughly **~3,160 tokens/request** from tool descriptions and **~1,890 tokens/request** from the system prompt — ~5,050 total (estimated at ~4:1 chars/token ratio, varies by tokenizer). Exact savings depend on your OpenCode version and model.
+Public fork of [SK-DEV-AI/opencode-slim-system](https://github.com/SK-DEV-AI/opencode-slim-system).
+The original Git history, author attribution and [MIT license](LICENSE) are retained. This fork's version is
+`3.0.0-v2.0`; it is **not** the upstream npm release. No npm package has been published by this fork, and
+`private: true` plus a test-only workflow prevent accidental npm publication.
 
-## How It Works
+## Install
 
-Two plugin hooks plus a TUI sidebar:
+Use OpenCode **V2**, not V1. Prefer an exact commit when installing from GitHub:
 
-### `tool.definition`
+```sh
+opencode plugin add github:boogy777-lgtm/opencode-slim-system#master
+```
 
-Replaces each built-in tool's description with a slim version from `~/.config/opencode/slim-system/tool/{id}.txt`. Covers 15 OpenCode built-in tools. Plugin and MCP tools are left untouched.
+`master` tracks this fork; replace it with a full commit hash to pin an audited revision. Do **not** install the
+unscoped npm name `opencode-slim-system`: that belongs to the upstream V1 plugin.
 
-### `experimental.chat.system.transform`
+Alternatively, clone to a **new, empty destination**, install dependencies and configure the **directory**:
 
-Replaces the stock system prompt with `~/.config/opencode/slim-system/prompt/default.txt`. Detects stock prompts by marker strings (e.g. "best coding agent on the planet"). The environment block (model info, directory, date) is preserved. Custom agent prompts without markers are not affected.
+```sh
+git clone https://github.com/boogy777-lgtm/opencode-slim-system.git
+cd opencode-slim-system
+npm ci --ignore-scripts
+```
 
-**Why hooks and not file overrides:** OpenCode's built-in prompts and tool descriptions are compiled into the binary. There is no filesystem override. The plugin hook is the only way to swap them.
-
-## What's Included
-
-| File | Purpose |
-|------|---------|
-| `tool/*.txt` | 15 slim tool descriptions |
-| `prompt/default.txt` | Slim system prompt (~240 tokens) |
-| `src/index.ts` | Server plugin — hooks into tool.definition and experimental.chat.system.transform |
-| `tui/index.tsx` | TUI sidebar — shows slim count, version, update indicator |
-| `src/defaults.ts` | Embedded fallback defaults (auto-generated) |
-| `tests/core.test.ts` | 34 tests covering parsing, resolution, I/O, integrity |
-
-## Sidebar Panel
-
-Registered at sidebar order 899. Shows:
-
-- **Tools slimmed** — count of covered built-in tools (15 on stock OpenCode)
-- **Token savings** — estimated per-request (approximate, labeled `~`)
-- **⬆ Update available** — when npm has a newer version
-- **plugin not loaded** — shown briefly before the server plugin writes its status file (normal)
-- **Update dialog** — on first TUI start per version, shows current vs latest + GitHub releases link
-
-## Status File
-
-The server plugin writes `/tmp/opencode-slim-system.json` at startup. The TUI sidebar polls it every 5 seconds. A background npm check updates `latest_version` and `update_available` fields within 1-2 seconds.
-
-## Per-model customization
-
-The plugin reads the current model from `opencode.jsonc` and extracts the model key (the short name after the last `/`):
-
-| Full model ID | Model key |
-|---|---|
-| `opencode/deepseek-v4-flash-free` | `deepseek-v4-flash-free` |
-| `opencode/claude-sonnet-4` | `claude-sonnet-4` |
-
-**Per-model tool descriptions:** Create `{toolID}.{modelKey}.txt` files. `bash.claude-sonnet-4.txt` activates when `opencode/claude-sonnet-4` is active. Falls back to `bash.txt` for all other models.
-
-**Per-model system prompts:** Create `prompt/{modelKey}.txt`. Takes precedence over `prompt/default.txt` when running that model.
-
-## Configuration
+Append an entry to your existing global `~/.config/opencode/opencode.json(c)` `plugins` array; preserve the other entries
+and settings. A project-level `opencode.json(c)` limits the plugin to that project.
 
 ```jsonc
 {
-  "plugin": [
-    ["opencode-slim-system", {
-      "exclude": ["websearch"],
-      "toolsDir": "/home/user/.config/opencode/slim-tools/"
-    }]
+  "$schema": "https://opencode.ai/config.json",
+  "plugins": [
+    {
+      "package": "/absolute/path/to/opencode-slim-system",
+      "options": {
+        "exclude": ["websearch"],
+        "systemPrompt": false
+      }
+    }
   ]
 }
 ```
 
-### Options
+On Windows use a directory such as `C:/Users/you/code/opencode-slim-system`. File paths such as `src/index.js` are **not**
+valid configured plugin targets in V2. Keep a locally linked clone and its `node_modules` in place.
 
-| Key | Type | Description |
-|-----|------|-------------|
-| `reset` | `boolean` | Wipes config directory and reseeds from embedded defaults on next restart |
-| `exclude` | `string[]` | Tool IDs to keep at original stock descriptions |
-| `tools` | `Record<string, string>` | Inline description overrides for any tool ID |
-| `toolsDir` | `string` | Custom path for `{id}.txt` files (default: `~/.config/opencode/slim-system/tool/`) |
+OpenCode watches configuration and reloads plugins. No shared-service restart is required for installation. Verify the
+active plugin ID and source with the plugin inventory (`GET /api/plugin`, using the relevant Location); a configured entry
+alone does not prove successful activation. Startup inventory may be empty before that Location's plugins have activated.
 
-**Priority chain:** `options.tools[toolID]` → `toolsDir/{toolID}.{modelKey}.txt` → `toolsDir/{toolID}.txt` → config dir → embedded defaults → stock.
+## What the V2 port actually does
 
-## Customization
+The entrypoint default-exports `Plugin.define({ id: "opencode-slim-system", setup(ctx) })` from `@opencode/plugin@2.2.5`.
+It registers the public V2 session hooks **`context`**, **`generate`**, and **`compaction`**, plus one command transform.
+There are no V1 hook keys or V1 SDK dependencies.
 
-Edit any `.txt` file in `~/.config/opencode/slim-system/tool/` or `prompt/default.txt` and restart OpenCode. Changes persist across npm updates. Placeholders (`${os}`, `${shell}`, `${chaining}`, etc.) are resolved at runtime.
+- Changes only `description` on matching tools in the **outgoing request draft**. Schemas, names, executors, permissions,
+  history and model options are unchanged. This is request-scoped slimming, not a global tool-registry transform.
+- Ships 13 V2 descriptions: `edit`, `glob`, `grep`, `patch`, `question`, `read`, `shell`, `skill`, `subagent`,
+  `todowrite`, `webfetch`, `websearch`, `write`. Only tools present in a particular request are changed.
+- Leaves unknown tools, MCP tools and other plugins' tools alone unless you explicitly supply their exact effective ID
+  through a file or inline override. A plugin overriding a built-in's ID shares that ID and is not distinguishable here.
+- Leaves the system prompt untouched by default. Set **`systemPrompt: true`** to opt in to replacing the first part
+  **only when its SHA-256 exactly matches a checked stock OpenCode 2.2.5 snapshot** and the active agent has no custom system
+  prompt. Subsequent system parts, including `AGENTS.md`, environment, date and instruction-source metadata, remain intact.
+- Does not touch title requests. No prompt-admission hook is registered, so canonical user messages are never rewritten.
 
-To reset a file to default, delete it and restart — the plugin re-seeds from its embedded defaults.
+The stock allowlist covers the fallback, GPT, GPT Astra, Kimi, Trinity and combined Anthropic templates from
+[OpenCode v2.2.5](https://github.com/anomalyco/opencode/tree/v2.2.5), including its shell/edit/write guidance combinations.
+Unknown prompt texts, dynamic Meta templates, additional text from another plugin, and metadata-bearing first parts are
+left unchanged. There is deliberately **no marker-substring fallback**. Shortening instructions can still change model
+behavior; evaluate on your own tasks before enabling system-prompt replacement globally.
 
-## Drift Detection
+## Options and customization
 
-When OpenCode adds new built-in tools or changes tool IDs, the shipped `tool/*.txt` files may fall out of sync.
+The optional customization directory is `$XDG_CONFIG_HOME/opencode/slim-system-v2`, or
+`~/.config/opencode/slim-system-v2` when XDG is unset. It is separate from V1's `slim-system` directory.
 
-```bash
-# From the repo clone
-./slim-plugin-check          # check coverage
-./slim-plugin-check --diff   # show add/remove commands
+| Option | Default | Behavior |
+| --- | --- | --- |
+| `exclude` | `[]` | Exact, case-sensitive tool IDs to leave unchanged; wins over overrides. |
+| `tools` | `{}` | Inline `id: description` overrides; custom/MCP IDs require explicit opt-in here or in files. |
+| `configDir` | V2 directory above | Base for `tool/*.txt` and `prompt/default.txt`. |
+| `toolsDir` | `<configDir>/tool` | A custom directory of `{effectiveToolID}.txt` descriptions. |
+| `systemPrompt` | `false` | Opt in to verified stock system-prompt replacement. |
 
-# Via npm
-npx opencode-slim-check
+Path options resolve relative to the plugin's OpenCode Location, not the config file. `~/` and `~\` expand to the user's
+home directory. Precedence: **exclude → inline tools → toolsDir files → embedded V2 defaults → unchanged**.
+`{{year}}` is resolved in all descriptions and the optional prompt. No other placeholders are supported.
+
+Create only the override files you need. Nothing is automatically seeded, overwritten, reset or deleted. Missing files
+fall back to embedded defaults; empty files, invalid options and filesystem errors other than missing paths fail setup
+with a diagnostic instead of being silently ignored. Options are described in [schema.json](schema.json).
+
+Files are read once during plugin setup, not watched independently. After editing an override, reload configuration
+with `/reload` (which also reloads other plugins); there is no need to restart the shared service.
+
+### Diagnostics
+
+`/slim-system-status` queues a synthetic status item with `resume: false`: it does **not** start a model request. It can be
+inspected in the session's pending inbox (`GET /api/session/{sessionID}/inbox`) and is delivered with the next turn.
+It reports configured IDs separately from the tools actually changed in the **last request at this Location** (which
+may belong to another session), whether that request's system prompt was replaced, and its character delta.
+
+`estimatedTokensSaved = round(charsSaved / 4)` is only a rough character-based estimate and can be negative for longer
+custom descriptions. There is no fixed V1 token baseline, claim of guaranteed savings, global `/tmp` status file,
+telemetry, update check, timer or persistent plugin state.
+
+## Migrating from the upstream V1 plugin
+
+1. Back up existing config. Replace only the old plugin's config entry; preserve unrelated plugins/settings.
+2. Use V2 `plugins: [{ "package": "<directory-or-Git-target>", "options": { ... } }]`, not V1 `plugin` tuples or file targets.
+3. Review overrides before copying to `slim-system-v2`: `bash` → `shell`, `task` → `subagent`, `apply_patch` → `patch`;
+   their argument names also changed (`path`, `sessionID`, etc.). Do not blindly rename old descriptions.
+4. V1 `lsp` and `plan_exit` templates are not loaded. V2 has no LSP runtime; model/agent/feature settings determine which
+   of the supported tools appear. `todowrite` requires `experimental.todo`.
+5. `reset` is intentionally rejected; this plugin never recursively deletes your customization directory.
+6. The V1 TUI sidebar is **not shipped in this port**. There is no `./tui` export and no need to edit `cli.json` or
+   `tui.json`. Use the status command instead. Per-model filename selection, export/import CLIs, npm update notifications
+   and drift-check commands previously advertised by upstream are not implemented here.
+
+V1 implementation entrypoints are not supported. For V2 API background, see the official
+[migration guide](https://opencode.ai/v2/docs/migrate-v1),
+[plugin migration guide](https://opencode.ai/v2/docs/build/plugins/migrate-v1) and
+[server plugin reference](https://opencode.ai/v2/docs/build/plugins/server).
+
+## Development and verification
+
+```sh
+npm ci --ignore-scripts
+npm run check
+npm pack --dry-run --ignore-scripts
 ```
 
-A CI workflow (`.github/workflows/drift-check.yml`) runs weekly and opens an issue if drift is detected.
+`check` regenerates `src/defaults.js`, typechecks the JavaScript against the **real V2 SDK**, and runs offline unit tests
+covering all registered hooks, exclusions/overrides, defaults completeness, non-destructive I/O, invalid options,
+status output and preservation of schemas/history/custom prompts. CI checks Node 22/24 on Linux and Windows and
+ensures generated defaults are committed. The CI workflow does not publish anything.
 
-## CLI Commands
+For an installed-package test with an **OpenCode 2.2.5 CLI**:
 
-| Command | Description |
-|---------|-------------|
-| `opencode-slim-export` | Export config dir as JSON. `npx opencode-slim-export > backup.json` |
-| `opencode-slim-import <file>` | Import JSON blob into config dir. `npx opencode-slim-import backup.json` |
-| `opencode-slim-dump` | Dump embedded defaults as JSON (ignores user edits). |
-| `opencode-slim-check` | Drift check (same as `./slim-plugin-check`) |
-
-## Limitations
-
-- **Token savings are approximate.** The 4:1 chars-to-token ratio varies by tokenizer. The `STOCK_TOOL_CHARS` baseline is measured from OpenCode v1.17.9 template files; newer versions may have different stock description lengths.
-- **`slimmed` count shows config dir files, not runtime coverage.** The sidebar shows 15 files in the config dir. Actual tools slimmed depends on your experimental flags (lsp, plan_exit are conditional; tools without those flags enabled will have stock descriptions but still count toward the 15). The real number may be 13-14 depending on your config.
-- **Drift detection is a maintainer tool.** `npx opencode-slim-check` is for repo maintainers, not end users. The plugin works fine without it.
-- **System prompt replacement uses marker heuristics.** Custom prompts (agents with `.md` files) are not touched.
-- **`plan_exit`, `lsp`, `question` are conditional tools.** They only exist in the tool registry when the corresponding experimental flags are enabled. Our tool descriptions for them cover all cases, but they're not always active.
-
-## Files on Disk
-
-| Path | Purpose |
-|------|---------|
-| `~/.config/opencode/slim-system/tool/` | User-editable slim tool descriptions (auto-seeded) |
-| `~/.config/opencode/slim-system/prompt/default.txt` | User-editable slim system prompt (auto-seeded) |
-| `/tmp/opencode-slim-system.json` | Runtime status (ephemeral) |
-| `~/.local/state/opencode-slim-system/announced.json` | Last announced update version |
-
-## Installation
-
-```bash
-npm install -g opencode-slim-system
+```sh
+OPENCODE_BIN=/path/to/opencode npm run test:live
 ```
 
-In `~/.config/opencode/opencode.jsonc`:
-```jsonc
-{
-  "plugin": ["opencode-slim-system"]
-}
+```powershell
+$env:OPENCODE_BIN = 'C:/path/to/opencode-cli.exe'
+npm run test:live
 ```
 
-In `~/.opencode/tui.json` and/or `~/.config/opencode/tui.json`:
-```json
-{
-  "plugin": ["opencode-slim-system"]
-}
-```
+The script runs `npm pack` and an isolated tarball installation, starts a **private authenticated** OpenCode server and
+local mock provider, verifies real `context`/`generate`/`compaction` requests, preservation of `AGENTS.md`/environment/custom
+agents/native tool schemas, no model call for status, and actual unload/reload behavior. It never modifies your shared
+service or user config, and makes **zero paid model requests**. Successful runs remove their own temporary directory;
+failed runs retain isolated artifacts for inspection. This proves integration, **not** real-model quality or tokenizer savings.
 
-Restart OpenCode. On first TUI load you'll see a toast confirming the plugin loaded.
+`scripts/gen-stock-prompts.js` is an explicit, network-using maintainer operation pinned to the upstream 2.2.5 commit.
+The plugin itself never downloads prompts. Original stock test fixtures include their upstream MIT license.
+
+### Known dependency limitation
+
+The pinned OpenCode SDK pulls in npm tooling dependencies. At verification time, `npm audit --omit=dev` reported
+**24 moderate transitive findings** involving `glob`/`minimatch`, with no fix offered; no high/critical findings were reported.
+They are not silently suppressed or force-upgraded outside the tested SDK contract. Recheck the lockfile when upgrading
+OpenCode. V2 releases other than 2.2.5 and live paid-provider behavior are not verified.
 
 ## License
 
-MIT
+MIT. Original plugin copyright remains in [LICENSE](LICENSE); OpenCode stock fixture licensing is in
+[tests/fixtures/stock/LICENSE](tests/fixtures/stock/LICENSE).

@@ -1,0 +1,2 @@
+# Prompt hashes and generated defaults must be byte-stable on Windows and Linux.
+* text=auto eol=lf

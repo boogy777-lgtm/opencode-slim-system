@@ -1,0 +1,4 @@
+Start a child session with a configured subagent ID, short description and self-contained prompt.
+Delegate only when authorized by the user or applicable instructions. Parallelize independent work when appropriate.
+background returns immediately and reports completion; pass sessionID to continue that child.
+Relay the child's relevant findings and limitations to the user. Use direct tools for simple reads/searches.

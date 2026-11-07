@@ -1,2 +1,2 @@
-Load a skill by name from the session's available_skills list.
-Injects skill instructions and resources into the active session.
+Load a skill's instructions and bundled resources by id.
+The id must be in the available skill list or explicitly named by the user. Follow applicable skill instructions.

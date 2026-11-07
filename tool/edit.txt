@@ -1,5 +1,3 @@
-Replace oldString with newString in one file. Must Read first.
-oldString must be unique per file — use replaceAll for batch rename.
-Never include `N: ` line prefix from Read output.
-Preserve exact indentation. Prefer editing existing files.
-Backed up before overwrite — undo via aft_safety.
+Replace oldString with newString in an existing file at path. Read the file first.
+The strings must differ; oldString must match exactly once unless replaceAll is true.
+Preserve indentation and never copy the read tool's line-number prefixes into the file.

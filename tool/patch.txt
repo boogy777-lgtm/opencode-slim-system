@@ -1,0 +1,4 @@
+Apply file changes with patchText in OpenCode's patch format.
+Wrap in *** Begin Patch / *** End Patch. Use *** Add File, *** Delete File or *** Update File headers.
+Prefix added lines with +. Update hunks use @@ context, -removed and +added lines.
+Use *** Move to: new-path after an Update File header to rename. Read existing files before editing.

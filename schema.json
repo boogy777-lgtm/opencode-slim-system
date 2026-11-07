@@ -1,29 +1,33 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/SK-DEV-AI/opencode-slim-system/master/schema.json",
-  "title": "opencode-slim-system plugin options",
-  "description": "Configuration schema for the opencode-slim-system plugin options in opencode.jsonc",
-  "version": 2,
+  "$id": "https://raw.githubusercontent.com/boogy777-lgtm/opencode-slim-system/master/schema.json",
+  "title": "Slim System V2 plugin options",
   "type": "object",
   "properties": {
     "exclude": {
-      "description": "Tool IDs to keep at original stock descriptions (not slimmed)",
+      "description": "Exact, case-sensitive tool IDs to leave unchanged.",
       "type": "array",
-      "items": { "type": "string" },
-      "uniqueItems": true
+      "items": { "type": "string" }
     },
     "tools": {
-      "description": "Inline description overrides for any tool ID (built-in or plugin). Highest priority.",
+      "description": "Explicit inline descriptions for effective tool IDs, including custom/MCP IDs. Highest priority.",
       "type": "object",
-      "additionalProperties": { "type": "string" }
+      "additionalProperties": { "type": "string", "pattern": "\\S" }
     },
     "toolsDir": {
-      "description": "Custom path to a directory of {id}.txt tool description files. Default: ~/.config/opencode/slim-system/tool/",
-      "type": "string"
+      "description": "Directory of {id}.txt overrides. Relative to the plugin Location; supports ~/ and ~\\.",
+      "type": "string",
+      "pattern": "\\S"
     },
-    "reset": {
-      "description": "When true, wipes the config directory and reseeds from embedded defaults on next restart.",
-      "type": "boolean"
+    "configDir": {
+      "description": "V2 customization directory; defaults to $XDG_CONFIG_HOME/opencode/slim-system-v2 or ~/.config/opencode/slim-system-v2.",
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "systemPrompt": {
+      "description": "Opt in to replacing exactly verified OpenCode 2.2.5 stock system prompts. Unknown/modified prompts and custom agents remain unchanged.",
+      "type": "boolean",
+      "default": false
     }
   },
   "additionalProperties": false

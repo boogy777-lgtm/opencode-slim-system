@@ -1,7 +1,3 @@
-Read a file or directory. filePath must be absolute.
-Returns `N: content` — never include prefix in Edit.
-Default: 2000 lines from start. Use offset (1-based) + limit.
-Lines >2000 chars truncated. Call in parallel for multiple files.
-Images/PDFs return metadata — vision models process inline.
-Use grep for content in large files, glob if unsure of path.
-Avoid tiny slices (30 line chunks) — read larger windows.
+Read a file or non-recursive directory listing by path. offset is 1-based; limit selects the page size.
+Text lines have numbered prefixes for reference only. Large output may be shortened; use grep to locate relevant sections.
+Supported images and PDFs are presented to the model. Prefer a larger relevant read over many tiny slices.

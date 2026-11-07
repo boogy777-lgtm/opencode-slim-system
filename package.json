@@ -1,43 +1,43 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "opencode-slim-system",
-  "version": "2.1.6",
-  "description": "Slim OpenCode system prompt and built-in tool descriptions to reduce per-request token overhead. Plugs into the tool.definition and experimental.chat.system.transform hooks.",
+  "version": "3.0.0-v2.0",
+  "private": true,
+  "description": "Compact tool descriptions and opt-in, verified stock system prompts for OpenCode V2.",
   "type": "module",
   "license": "MIT",
   "author": "SK",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SK-DEV-AI/opencode-slim-system.git"
+    "url": "git+https://github.com/boogy777-lgtm/opencode-slim-system.git"
   },
   "exports": {
-    ".": "./src/index.js",
-    "./tui": "./tui/index.jsx"
+    ".": "./src/index.js"
   },
   "main": "./src/index.js",
   "files": [
     "src",
-    "tui",
     "tool",
     "prompt",
-    "README.md"
+    "README.md",
+    "schema.json",
+    "LICENSE"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
-  "peerDependencies": {
-    "@opencode-ai/plugin": ">=1.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@opencode-ai/plugin": {
-      "optional": true
-    }
+  "dependencies": {
+    "@opencode/plugin": "2.2.5"
   },
   "scripts": {
     "gen-defaults": "node scripts/gen-defaults.js",
-    "test": "node --test tests/core.test.js"
+    "test": "node --test tests/*.test.js",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run gen-defaults && npm run typecheck && npm test",
+    "test:live": "node scripts/live-smoke.js"
   },
   "devDependencies": {
-    "@opencode-ai/plugin": "^1.17.9"
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.3"
   }
 }

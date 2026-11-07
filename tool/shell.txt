@@ -1,0 +1,4 @@
+Execute a command in the host shell. Set workdir instead of cd; timeout is milliseconds.
+Use dedicated read, glob, grep and editing tools where suitable. Quote paths containing spaces.
+Use background for long-running work; completion is reported automatically. Do not poll.
+Inspect git status/diff before committing; commit or push only when authorized. Never discard other people's work, force-push, or expose secrets.

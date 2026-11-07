@@ -1,4 +1,3 @@
-Find file paths by glob pattern (e.g. `**/*.ts`).
-Respects .gitignore. Results sorted by mtime.
-Call multiple Globs in parallel for independent patterns.
-For open-ended search needing multiple rounds, use Task instead.
+Find file paths using a glob pattern such as **/*.ts. path selects the search directory.
+hidden includes hidden entries; limit caps results (default 100).
+Run independent searches in parallel. Use grep to search file contents.
